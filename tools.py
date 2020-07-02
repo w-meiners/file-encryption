@@ -28,7 +28,7 @@ def create_keys(fullname):
         
     os.chmod(fullname,0o700)
 
-def read_private_key(fullname):
+def read_secret_key(fullname):
     ''' Read a private key for nacl from fullname.
         The path and the fullname must have the right permissions, og-rwx
         (Only user can read,write or execute secret key)
