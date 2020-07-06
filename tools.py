@@ -1,5 +1,6 @@
 import nacl.public, nacl.encoding
 import os
+import gzip
 
 def create_keys(fullname):
     ''' Create secret and public keys for nacl
@@ -52,15 +53,22 @@ def read_public_key(fullname):
 
 def encrypt(sk,pk,f_in_name,f_out_name):
     ''' encrypt f_in_name to f_out_name using nacl with 
-        secret key sk and public key pk
+        secret key sk and public key pk. If f_out_name
+        ends with '.gz', use gzip
     '''
-    with open(f_in_name,'rb') as f_in, open(f_out_name,'wb') as f_out:
+    gzipped = os.path.splitext(f_out_name)[1] == '.gz'
+    out = gzip.open if gzipped else open
+    
+    with open(f_in_name,'rb') as f_in, out(f_out_name,'wb') as f_out:
         f_out.write(nacl.public.Box(sk,pk).encrypt(f_in.read()))
 
 
 def decrypt(sk,pk,f_in_name,f_out_name):
     ''' decrypt f_in_name to f_out_name using nacl with
-        secret key sk und public key pk
+        secret key sk und public key pk. If f_in_name ends
+        with '.gz' use gzip
     '''
-    with open(f_in_name,'rb') as f_in, open(f_out_name,'wb') as f_out:
+    gzipped = os.path.splitext(f_in_name)[1] == '.gz'
+    in_ = gzip.open if gzipped else open
+    with in_(f_in_name,'rb') as f_in, open(f_out_name,'wb') as f_out:
         f_out.write(nacl.public.Box(sk,pk).decrypt(f_in.read()))
