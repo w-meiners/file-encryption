@@ -1,5 +1,6 @@
 import nacl.public, nacl.encoding
 import os
+import stat
 import gzip
 
 def create_keys(fullname):
@@ -18,8 +19,17 @@ def create_keys(fullname):
     path,name = os.path.split(fullname)
     pub_name = fullname+'.pub'
     
-    assert os.path.exists(path), f'path does not exist: {path}'
-    assert os.stat(path).st_mode & 0o700, f'wrong permission on path: {path}'
+    assert os.path.exists(path), f"path '{path}' does not exist"
+    
+    # user, group and others permissions on path must be 0o700
+    # what means: user can read (1), write (2), execute (4) , 1+2+4 = 0o7
+    #             group can not read, write or execute (0)            0o0
+    #             others can not read, write or execute (0)           0o0
+    assert (os.stat(path).st_mode & 0o777) == 0o700, \
+    f"Mode of path: '{path}' must be 'rwx------' "\
+    f"but is '{stat.filemode(os.stat(path).st_mode)[1:]}'"
+    
+    assert not os.path.exists(fullname), f"keyfile: '{fullname}' exists already"
     
     with open(fullname,'w') as s_f, open(pub_name,'w') as p_f:
         key = nacl.public.PrivateKey.generate()
@@ -35,8 +45,12 @@ def read_secret_key(fullname):
         (Only user can read,write or execute secret key)
     '''
     path,name = os.path.split(fullname)
-    assert os.stat(path).st_mode & 0o700, f'wrong permission on path {path}'
-    assert os.stat(fullname).st_mode & 0o700, f'wrong permission on file {fullname}'
+    assert (os.stat(path).st_mode & 0o777) == 0o700, \
+    f"Mode of path '{path}' must be 'rwx------' "\
+    f"but is '{stat.filemode(os.stat(path).st_mode)[1:]}'"
+    assert (os.stat(fullname).st_mode & 0o777) == 0o700, \
+    f"Mode of file '{fullname}' must be 'rwx------' "\
+    f"but is {stat.filemode(os.stat(fullname).st_mode)[1:]}"
     
     with open(fullname,'r') as f:
         key = nacl.public.PrivateKey(f.read().encode(),encoder=nacl.encoding.HexEncoder)
