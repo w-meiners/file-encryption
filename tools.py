@@ -3,6 +3,11 @@ import os
 import stat
 import gzip
 
+def assert_permissions(name, permission):
+    message = f"Permission of '{name}' must be '{permission}'. "\
+               "See 'chmod' for help"
+    assert stat.filemode(os.stat(name).st_mode)[1:] == permission, message
+
 def create_keys(fullname):
     ''' Create secret and public keys for nacl
     
@@ -13,22 +18,19 @@ def create_keys(fullname):
         If path has wrong permissions, raise an error:
         Only onwner can read,write or execute path (i.e. chmod path og-rwx)
         
+        If fullname exists, raise an error
+        
         The permissions of the resulting secret keyfile is og-rwx
         (Only owner can read,write or execute secret keyfile)
     '''
     path,name = os.path.split(fullname)
     pub_name = fullname+'.pub'
     
-    assert os.path.exists(path), f"path '{path}' does not exist"
+    # path must exist with permissions 'rwx------'
+    assert os.path.exists(path), f"Path '{path}' does not exist"
+    assert_permissions(path,'rwx------')
     
-    # user, group and others permissions on path must be 0o700
-    # what means: user can read (1), write (2), execute (4) , 1+2+4 = 0o7
-    #             group can not read, write or execute (0)            0o0
-    #             others can not read, write or execute (0)           0o0
-    assert (os.stat(path).st_mode & 0o777) == 0o700, \
-    f"Mode of path: '{path}' must be 'rwx------' "\
-    f"but is '{stat.filemode(os.stat(path).st_mode)[1:]}'"
-    
+    # fullname must not exist
     assert not os.path.exists(fullname), f"keyfile: '{fullname}' exists already"
     
     with open(fullname,'w') as s_f, open(pub_name,'w') as p_f:
