@@ -16,13 +16,14 @@ def create_keys(fullname):
         
         If path does not exist, raise an error
         If path has wrong permissions, raise an error:
-        Only onwner can read,write or execute path (i.e. chmod path og-rwx)
+        Only onwner can read,write or execute path (i.e. chmod og-rwx u=rwx path)
         
         If fullname exists, raise an error
         
         The permissions of the resulting secret keyfile is og-rwx
         (Only owner can read,write or execute secret keyfile)
     '''
+    
     path,name = os.path.split(fullname)
     pub_name = fullname+'.pub'
     
@@ -39,20 +40,22 @@ def create_keys(fullname):
         s_f.write(key.encode(nacl.encoding.HexEncoder).decode())
         p_f.write(key.public_key.encode(nacl.encoding.HexEncoder).decode())
         
-    os.chmod(fullname,0o700)
+    os.chmod(fullname,0o600)
 
 def read_secret_key(fullname):
     ''' Read a private key for nacl from fullname.
         The path and the fullname must have the right permissions, og-rwx
         (Only user can read,write or execute secret key)
     '''
+    
+    # fullname must exist with permissions 'rw-------'
+    assert os.path.exists(fullname), f"File '{fullpath}' does not exist"
+    assert_permissions(fullname,'rw-------')
+        
     path,name = os.path.split(fullname)
-    assert (os.stat(path).st_mode & 0o777) == 0o700, \
-    f"Mode of path '{path}' must be 'rwx------' "\
-    f"but is '{stat.filemode(os.stat(path).st_mode)[1:]}'"
-    assert (os.stat(fullname).st_mode & 0o777) == 0o700, \
-    f"Mode of file '{fullname}' must be 'rwx------' "\
-    f"but is {stat.filemode(os.stat(fullname).st_mode)[1:]}"
+    
+    # path must exist with permissions 'rwx------'
+    assert_permissions(path,'rwx------')
     
     with open(fullname,'r') as f:
         key = nacl.public.PrivateKey(f.read().encode(),encoder=nacl.encoding.HexEncoder)
